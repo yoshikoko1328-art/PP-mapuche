@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>マプチェ伝承 神々と妖怪・怪異図鑑</title>
+  <!-- Leaflet CSS for Interactive Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --bg-color: #fdfbf7;
+      --paper-color: #f4ebd0;
+      --paper-dark: #e6d7b2;
+      --accent-yellow: #d4a373;
+      --gold: #b5838d;
+      --text-dark: #3d312a;
+      --border-color: #8c7851;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Georgia', 'Times New Roman', serif, "Hiragino Mincho ProN", "MS PMincho";
+      background-color: var(--bg-color);
+      color: var(--text-dark);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      background-color: var(--paper-dark);
+      border-bottom: 2px solid var(--border-color);
+      padding: 15px 20px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      letter-spacing: 2px;
+      color: #4a3b32;
+      text-shadow: 1px 1px 0px #fff;
+    }
+
+    header p {
+      font-size: 0.9rem;
+      color: #6b5b52;
+      margin-top: 5px;
+    }
+
+    /* Main Container Layout */
+    .container {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 70px);
+      position: relative;
+    }
+
+    /* Map Styling (Ancient Map Aesthetic) */
+    #map {
+      flex: 1;
+      height: 100%;
+      background-color: #f0e6d2;
+      filter: sepia(0.3) contrast(1.05) brightness(0.95);
+      cursor: grab;
+    }
+
+    #map:active {
+      cursor: grabbing;
+    }
+
+    /* Custom Marker Styling */
+    .custom-marker {
+      display: flex;
+      justify-content: center;
+      align-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 2px solid var(--border-color);
+      box-shadow: 0 0 5px rgba(0,0,0,0.4);
+      font-weight: bold;
+      font-size: 14px;
+      line-height: 26px;
+      text-align: center;
+      color: #fff;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .custom-marker:hover {
+      transform: scale(1.2);
+    }
+
+    .marker-god {
+      background-color: #c98a2c; /* Gold/Yellow for Gods */
+    }
+
+    .marker-monster {
+      background-color: #7a3a29; /* Dark Red/Brown for Monsters */
+    }
+
+    /* Modal / Popup Detail View */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.6);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .modal-content {
+      background-color: var(--paper-color);
+      background-image: radial-gradient(#e6d7b2 1px, transparent 0);
+      background-size: 10px 10px;
+      border: 3px double var(--border-color);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      max-width: 600px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 30px;
+      position: relative;
+      border-radius: 4px;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      font-size: 28px;
+      font-weight: bold;
+      color: var(--border-color);
+      cursor: pointer;
+    }
+
+    .close-btn:hover {
+      color: #000;
+    }
+
+    .entity-type {
+      display: inline-block;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      border-radius: 3px;
+      text-transform: uppercase;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+
+    .type-god { background-color: #c98a2c; }
+    .type-monster { background-color: #7a3a29; }
+
+    .entity-title {
+      font-size: 1.8rem;
+      color: #3a2e2b;
+      margin-bottom: 5px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 5px;
+    }
+
+    .entity-subtitle {
+      font-style: italic;
+      color: #6e5e54;
+      margin-bottom: 15px;
+      font-size: 0.95rem;
+    }
+
+    .detail-section {
+      margin-bottom: 15px;
+    }
+
+    .detail-section h4 {
+      font-size: 1rem;
+      color: #5c4333;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .detail-section p {
+      line-height: 1.6;
+      font-size: 0.95rem;
+      color: #2b221e;
+    }
+
+    /* References Section in Modal */
+    .references {
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 1px dashed var(--border-color);
+      font-size: 0.8rem;
+      color: #66574d;
+    }
+
+    .references h5 {
+      margin-bottom: 5px;
+    }
+
+    .references ul {
+      list-style-type: square;
+      padding-left: 20px;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      header h1 { font-size: 1.3rem; }
+      .modal-content { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>マプチェ伝承 神々と妖怪の古地図</h1>
+    <p>チリ・アルゼンチンに伝わる聖なる精霊と恐ろしい怪異の伝承を探索する</p>
+  </header>
+
+  <div class="container">
+    <div id="map"></div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div id="detailModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal()">&times;</span>
+      <span id="entityType" class="entity-type"></span>
+      <h2 id="entityTitle" class="entity-title"></h2>
+      <div id="entityLocation" class="entity-subtitle"></div>
+      
+      <div class="detail-section">
+        <h4>伝承・内容</h4>
+        <p id="entityDescription"></p>
+      </div>
+
+      <div class="detail-section">
+        <h4>誕生経緯</h4>
+        <p id="entityOrigin"></p>
+      </div>
+
+      <div class="references">
+        <h5>参考文献</h5>
+        <ul id="referenceList"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Data definition
+    const mapucheData = [
+      // --- チリ：神様 (10) ---
+      {
+        name: "ンゲネチェン (Ngenechen)",
+        type: "god",
+        country: "チリ",
+        locationName: "チリ（マプチェ伝統領域全域）",
+        lat: -38.7392, lng: -72.5984,
+        description: "生命の創造主であり、万物を支配する至高神。男性・女性・若者・老人の4つの側面を併せ持つ。",
+        origin: "宇宙の初め、世界の調和と生命の維持のために天の頂（ウェヌ・マプ）に自然発生的に誕生した。",
+        refs: ["辻吉人『アンデス・マプチェの神話と伝承』", "UNESCO Heritage Documentation"]
+      },
+      {
+        name: "ピルヤン (Pillán)",
+        type: "god",
+        country: "チリ",
+        locationName: "チリ（アンデス火山群）",
+        lat: -39.2812, lng: -71.8532,
+        description: "火山、雷、地震を司る強力な精霊・神格。正義を重んじ、人間の不徳に対して噴火や雷で罰を与える。",
+        origin: "天の光と火の威力が集結し、大地の深部および空に現れた。",
+        refs: ["辻吉人『アンデス・マプチェの神話と伝承』", "Museo Chileno de Arte Precolombino Portal"]
+      },
+      {
+        name: "トレントレン・ビル (Tren Tren Vilu)",
+        type: "god",
+        country: "チリ",
+        locationName: "チリ（沿岸および山岳部）",
+        lat: -36.8270, lng: -73.0503,
+        description: "大地と山々を司る善なる大蛇神。カイカイが引き起こした大津波から人類を山へ避難させて救った。",
+        origin: "海の脅威から地上と人類を守るため、大地の守護力として誕生した。",
+        refs: ["稲葉茂勝『世界の神話・伝承解体新書：南米編』", "Memoria Chilena"]
+      },
+      {
+        name: "カイカイ・ビル (Cai Cai Vilu)",
+        type: "god",
+        country: "チリ",
+        locationName: "チリ（太平洋沿岸）",
+        lat: -37.0000, lng: -73.5000,
+        description: "海と水を支配する荒々しい大蛇神。かつて世界を水没させようと大津波を起こした。",
+        origin: "海洋の巨大なエネルギーと破壊的性質から深海にて生み出された。",
+        refs: ["稲葉茂勝『世界の神話・伝承解体新書：南米編』", "Memoria Chilena"]
+      },
+      {
+        name: "アントゥ (Antü)",
+        type: "god",
+        country: "チリ",
+        locationName: "チリ（高地・天界）",
+        lat: -33.4489, lng: -70.6693,
+        description: "太陽を象徴する雄大な神。ピルヤンたちのなかでも最も強力な光の主とされる。",
+        origin: "宇宙の闇を照らし出す最初の光として天界に生じた。",
+        refs: ["Course, Magnus. Becoming Mapuche"]
+      },
+      {
+        name: "クイエン (Küyen)",
+        type: "god",
+        country: "チリ",
+        locationName: "チリ（夜空）",
+        lat: -34.6037, lng: -71.0000,
+        description: "月を司る女神。アントゥの妻であり、夢や夜の静寂、女性の周期を守護する。",
+        origin: "太陽（アントゥ）の対比として、夜の優しさと静けさから生み出された。",
+        refs: ["Bacigalupo, Ana Mariella. Shamans of the Foye Tree"]
+      },
+      {
+        name: "ンゲン・マプ (Ngen Mapu)",
+        type: "god",
+        country: "チリ",
+        locationName: "チリ（大地全域）",
+        lat: -38.0000, lng: -72.0000,
+        description: "大地そのものの精霊・守護神。土壌の恵みと生態系の平衡を管理する。",
+        origin: "世界が形成された際、大地に生命が満ちるのと同時に宿った。",
+        refs: ["Course, Magnus. Becoming Mapuche"]
+      },
+      {
+        name: "ンゲン・コ (Ngen Ko)",
+        type: "god",
+        country: "チリ",
+        locationName: "チリ（川・湖・湧水地）",
+        lat: -39.8142, lng: -73.2459,
+        description: "淡水を守護する神霊。清らかな水資源を荒らす者には罰を与える。",
+        origin: "山々から最初の水が流れ出た際、水源を守る存在として誕生した。",
+        refs: ["UNESCO Heritage Documentation"]
+      },
+      {
+        name: "ンゲン・マウィダ (Ngen Mawida)",
+        type: "god",
+        country: "チリ",
+        locationName: "チリ（原生林・森）",
+        lat: -40.5739, lng: -72.1186,
+        description: "森林とそこに生息する動植物を守る精霊神。樹木伐採や狩猟の許可を与える存在。",
+        origin: "アンデスの豊かな森林が広がる過程で自然発生的に生じた。",
+        refs: ["Bacigalupo, Ana Mariella. Shamans of the Foye Tree"]
+      },
+      {
+        name: "ペフエンの精霊 (Ngen Pehuén)",
+        type: "god",
+        country: "チリ",
+        locationName: "チリ（アリウカリア/ナンヨウスギの森）",
+        lat: -37.8000, lng: -71.3000,
+        description: "聖なる木とされるペフエン（ピーナッツのような実をつける木）を守る神。飢餓からマプチェを救う。",
+        origin: "酷寒の飢えから人々を救うため、ンゲネチェンによって植物に宿された。",
+        refs: ["辻吉人『アンデス・マプチェの神話と伝承』"]
+      },
+
+      // --- チリ：妖怪・怪物 (10) ---
+      {
+        name: "チョンチョン (Chonchón)",
+        type: "monster",
+        country: "チリ",
+        locationName: "チリ（村落部）",
+        lat: -35.4264, lng: -71.6554,
+        description: "人間の首が離脱し、巨大化した耳を翼のように羽ばたかせて夜空を飛ぶ怪鳥型の妖怪。",
+        origin: "邪悪な魔術師（カルク）が特定の薬膏を首に塗り、変身儀式を行うことで誕生する。",
+        refs: ["稲葉茂勝『世界の神話・伝承解体新書：南米編』"]
+      },
+      {
+        name: "トラウコ (Trauco)",
+        type: "monster",
+        country: "チリ",
+        locationName: "チリ（チロエ島）",
+        lat: -42.6000, lng: -73.9333,
+        description: "斧を持った背の低い醜悪な小男。強力な視線と息で女性を魅了し、妊娠させるとされる。",
+        origin: "森の野生的な生殖力と魅惑の恐怖が具現化して生まれた。",
+        refs: ["Memoria Chilena"]
+      },
+      {
+        name: "クエロ (Cuero / El Cuero)",
+        type: "monster",
+        country: "チリ",
+        locationName: "チリ（湖沼・河川）",
+        lat: -39.0000, lng: -72.3000,
+        description: "乾かした牛の皮のような平たい姿をした水棲生物。縁に目と爪があり、獲物を包み込んで血を吸う。",
+        origin: "水底に沈んだ動物の皮に、水界の邪悪な不浄霊が憑依して変化した。",
+        refs: ["辻吉人『アンデス・マプチェの神話と伝承』"]
+      },
+      {
+        name: "ピウチェン (Pihuenchen)",
+        type: "monster",
+        country: "チリ",
+        locationName: "チリ（森林地帯）",
+        lat: -37.2000, lng: -72.0000,
+        description: "翼を持つ蛇の姿をした吸血の怪物。木の上に潜み、目線や不気味な音で獲物を動けなくして血を吸う。",
+        origin: "長い年月を経た大樹の樹液と不吉な霊気が結びついて形を成した。",
+        refs: ["Museo Chileno de Arte Precolombino Portal"]
+      },
+      {
+        name: "イブンチェ (Imbunche)",
+        type: "monster",
+        country: "チリ",
+        locationName: "チリ（魔術師の洞窟）",
+        lat: -42.2000, lng: -73.7000,
+        description: "首が180度後ろを向き、片足が背中に縫い付けられた洞窟の門番怪物。言葉を発せず叫び声のみをあげる。",
+        origin: "邪悪な魔術師が人間の赤ん坊を誘拐し、骨を折って異形へと肉体改造して造り出す。",
+        refs: ["Memoria Chilena"]
+      },
+      {
+        name: "フィウラ (Fiura)",
+        type: "monster",
+        country: "チリ",
+        locationName: "チリ（チロエ島の沼地）",
+        lat: -42.8000, lng: -73.8000,
+        description: "トラウコの妻とされる極めて醜い女悪魔。呼吸や触れることで人の関節を歪ませ病気にさせる。",
+        origin: "湿地帯の湿気と腐敗した邪気が凝縮して誕生した。",
+        refs: ["Memoria Chilena"]
+      },
+      {
+        name: "アリカント (Alicanto)",
+        type: "monster",
+        country: "チリ",
+        locationName: "チリ（アタカマ砂漠・北部山岳）",
+        lat: -23.8634, lng: -69.1328,
+        description: "金や銀を食料とし、羽が鮮やかに発光する伝説の鳥。欲深い者を絶壁へと誘導して落とす。",
+        origin: "大地深くに眠る鉱石のエネルギーが鳥の姿をとって出現した。",
+        refs: ["稲葉茂勝『世界の神話・伝承解体新書：南米編』"]
+      },
+      {
+        name: "カレウチェ (Caleuche)",
+        type: "monster",
+        country: "チリ",
+        locationName: "チリ（チロエ島周辺海域）",
+        lat: -41.8697, lng: -73.8203,
+        description: "眩しい光と美しい音楽を発しながら夜の海を航海する幽霊船。水死者の魂を乗せている。",
+        origin: "海で命を落とした船員や漁師たちの無念の魂が集まり、一つの船として具現化した。",
+        refs: ["Memoria Chilena"]
+      },
+      {
+        name: "カルチャン (Calchona)",
+        type: "monster",
+        country: "チリ",
+        locationName: "チリ（農村部）",
+        lat: -33.0000, lng: -71.2000,
+        description: "ボサボサの長い毛を持つ黒い犬の姿をした怪物。夜間に徘徊し、旅人を威嚇する。",
+        origin: "魔法の塗料を使って動物に変身した魔女が、元に戻る薬を失いそのまま怪異となった。",
+        refs: ["稲葉茂勝『世界の神話・伝承解体新書：南米編』"]
+      },
+      {
+        name: "コレ・コレ (Colo Colo)",
+        type: "monster",
+        country: "チリ",
+        locationName: "チリ（古い家屋の床下）",
+        lat: -36.5000, lng: -72.0000,
+        description: "トカゲの体に雄鶏の頭を持つ小型の怪物。住人の唾液や生命力を秘かに吸い取り弱らせる。",
+        origin: "蛇が温めた雄鶏の卵から生まれ、暗い床下に潜み育つ。",
+        refs: ["辻吉人『アンデス・マプチェの神話と伝承』"]
+      },
+
+      // --- アルゼンチン：神様 (10) ---
+      {
+        name: "コケナ (Coquena)",
+        type: "god",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（西北部～パタゴニア北端）",
+        lat: -24.7821, lng: -65.4232,
+        description: "ビクーニャやグアナコなどの野生動物を守護する小人の神。無意味な乱獲を行う狩人に天罰を下す。",
+        origin: "大地の母パチャママから動物たちを保護するための忠実な使いとして生み出された。",
+        refs: ["稲葉茂勝『世界の神話・伝承解体新書：南米編』"]
+      },
+      {
+        name: "ユンカの風神 (Yunca Spirit)",
+        type: "god",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（アンデス東麓の谷間）",
+        lat: -28.4696, lng: -65.7852,
+        description: "山谷を吹き抜ける風をコントロールし、乾いた土地に温もりをもたらす神格。",
+        origin: "アンデスから吹き下ろす気流の循環から自然発生的に成立した。",
+        refs: ["辻吉人『アンデス・マプチェの神話と伝承』"]
+      },
+      {
+        name: "ンゲン・クトラル (Ngen Kütral)",
+        type: "god",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（パタゴニア平原）",
+        lat: -43.2965, lng: -65.1023,
+        description: "火の精霊神。寒冷な草原地帯で人々に暖を与え、調理の火を守護する。",
+        origin: "人類が最初に起こした聖なる火の中に宿ることで誕生した。",
+        refs: ["Course, Magnus. Becoming Mapuche"]
+      },
+      {
+        name: "ンゲン・キュイエン (Ngen Küyen)",
+        type: "god",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（夜間の平原）",
+        lat: -40.8135, lng: -62.9967,
+        description: "夜の旅人を照らし、方向を示す月光の精霊神。",
+        origin: "満月の夜に平原を照らす光の結集として顕現した。",
+        refs: ["Bacigalupo, Ana Mariella. Shamans of the Foye Tree"]
+      },
+      {
+        name: "クテン・フウシャ (Kutru Fücha)",
+        type: "god",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（パタゴニア南部）",
+        lat: -50.3379, lng: -72.2648,
+        description: "南からの冷たい嵐や吹雪を司る老神。",
+        origin: "極南からの凍てつく寒気が意志を持ったことで誕生。",
+        refs: ["辻吉人『アンデス・マプチェの神話と伝承』"]
+      },
+      {
+        name: "ウェヌ・フウシャ (Wenu Fücha)",
+        type: "god",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（天界）",
+        lat: -31.4201, lng: -64.1888,
+        description: "天の秩序を司る老いた父神格。調和と平和を保つ。",
+        origin: "万物の調和のために至高神の意図から派生した。",
+        refs: ["Course, Magnus. Becoming Mapuche"]
+      },
+      {
+        name: "ウェヌ・クシェ (Wenu Kushe)",
+        type: "god",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（天界）",
+        lat: -32.9442, lng: -60.6505,
+        description: "天の慈愛を司る老いた母神格。祈りを聞き届け、恵みを与える。",
+        origin: "天の父神とともに世界のバランスをとるために生じた。",
+        refs: ["Course, Magnus. Becoming Mapuche"]
+      },
+      {
+        name: "ンゲン・ルフォ (Ngen Ruko)",
+        type: "god",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（湿地・湿原）",
+        lat: -34.6037, lng: -58.3816,
+        description: "湿原や沼地の豊かな生態系を保つ守護霊神。",
+        origin: "大地に水が集まり湿原が生まれた際に宿った。",
+        refs: ["UNESCO Heritage Documentation"]
+      },
+      {
+        name: "ンゲン・クリフ (Ngen Küruf)",
+        type: "god",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（パンパ大平原）",
+        lat: -36.6167, lng: -64.2833,
+        description: "風を自在に操る風神。季節の変わり目を告げる強風を起こす。",
+        origin: "平原を絶え間なく駆け抜ける大気の動きから生まれた。",
+        refs: ["辻吉人『アンデス・マプチェの神話と伝承』"]
+      },
+      {
+        name: "インカリ (Inkarri)",
+        type: "god",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン西北部（アンデス共通伝承）",
+        lat: -22.1054, lng: -65.5980,
+        description: "破壊された世界の再建と秩序の回復を約束するメシア的神格。",
+        origin: "先住民の受難の歴史と再興への祈りが集積して形成された。",
+        refs: ["稲葉茂勝『世界の神話・伝承解体新書：南米編』"]
+      },
+
+      // --- アルゼンチン：妖怪・怪物 (10) ---
+      {
+        name: "ルビソン (El Lobizón)",
+        type: "monster",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（広域）",
+        lat: -31.0000, lng: -61.0000,
+        description: "7番目に生まれた男の子が呪いによって変身する不気味な人狼。墓場を荒らし家畜を襲う。",
+        origin: "土着の獣人伝承にヨーロッパの狼男伝説が融合して生まれた。",
+        refs: ["稲葉茂勝『世界の神話・伝承解体新書：南米編』"]
+      },
+      {
+        name: "ファミリア (El Familiar)",
+        type: "monster",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（農園・製糖地域）",
+        lat: -26.8241, lng: -65.2226,
+        description: "人間を捕食する巨大な黒い犬の姿をした地獄の悪魔。",
+        origin: "過酷な労働環境や富の不正な独占に対する労働者の恐怖と怨念から生み出された。",
+        refs: ["稲葉茂勝『世界の神話・伝承解体新書：南米編』"]
+      },
+      {
+        name: "ワイラママ (Huayramama)",
+        type: "monster",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（北西部平原）",
+        lat: -25.5000, lng: -63.0000,
+        description: "空を飛び、激しい竜巻や突風を引き起こす巨大な有翼の大蛇。",
+        origin: "竜巻の荒々しいエネルギーと大蛇のイメージが合体して誕生した。",
+        refs: ["辻吉人『アンデス・マプチェの神話と伝承』"]
+      },
+      {
+        name: "ミキロ (Mikilo)",
+        type: "monster",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（乾燥地帯）",
+        lat: -29.4131, lng: -66.8558,
+        description: "大きな手と帽子を持つ小鬼。最も暑い昼の時間帯（シエスタ）に歩く子供を捕まえる。",
+        origin: "酷暑の危険から子供を守るための大人たちの教えが妖怪化した。",
+        refs: ["稲葉茂勝『世界の神話・伝承解体新書：南米編』"]
+      },
+      {
+        name: "ルナウトゥルンコ (Runauturunco)",
+        type: "monster",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（チャコ・アンデス境界）",
+        lat: -27.0000, lng: -62.0000,
+        description: "人間に化けることができる巨大なジャガー（人虎）。",
+        origin: "邪悪な術を使う呪術師が儀式によって自らの姿を野獣に変えたもの。",
+        refs: ["辻吉人『アンデス・マプチェの神話と伝承』"]
+      },
+      {
+        name: "チェルフェフ (Cherfeve / Cherfe)",
+        type: "monster",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（アンデス火山帯）",
+        lat: -36.0000, lng: -70.0000,
+        description: "溶岩と蛇でできたマグマの巨大怪物。火山噴火や流星とともに現れる。",
+        origin: "火山内部の灼熱と地殻変動の恐怖から生み出された。",
+        refs: ["Museo Chileno de Arte Precolombino Portal"]
+      },
+      {
+        name: "ウプパ (Upupa)",
+        type: "monster",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（夜の山麓）",
+        lat: -33.0000, lng: -69.0000,
+        description: "夜間に山道で不気味な口笛を吹き、返事をした者の声を奪う音の妖怪。",
+        origin: "夜の山中で響く風の風切り音が人々に与える不気味さから生まれた。",
+        refs: ["稲葉茂勝『世界の神話・伝承解体新書：南米編』"]
+      },
+      {
+        name: "カライ・オクトブレ (Karaí Octubre)",
+        type: "monster",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（北東部境界）",
+        lat: -27.4692, lng: -58.8306,
+        description: "痩せこけた老人の姿をし、家庭の食糧蓄えを確かめて飢餓をもたらす悪霊。",
+        origin: "収穫前の最も食糧が不足する時期（10月）への戒めから生み出された。",
+        refs: ["稲葉茂勝『世界の神話・伝承解体新書：南米編』"]
+      },
+      {
+        name: "ヤカラ・ルビ (Yacarerubí)",
+        type: "monster",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（大河沿い）",
+        lat: -31.7319, lng: -60.5238,
+        description: "目が赤く発光し、水辺に近づく人間や動物を丸呑みにする巨大ワニの怪物。",
+        origin: "大河に潜む危険な野生動物への恐怖が誇張されて生まれた。",
+        refs: ["辻吉人『アンデス・マプチェの神話と伝承』"]
+      },
+      {
+        name: "ウラ・ネグラ (Oura Negra)",
+        type: "monster",
+        country: "アルゼンチン",
+        locationName: "アルゼンチン（農村部）",
+        lat: -35.0000, lng: -60.0000,
+        description: "夜間に家畜の小屋へ侵入し、傷をつけずに血液だけを吸い尽くす黒い影の怪物。",
+        origin: "家畜の突然死や正体不明の病気に対する不安から生まれた。",
+        refs: ["稲葉茂勝『世界の神話・伝承解体新書：南米編』"]
+      }
+    ];
+
+    // Initialize Leaflet Map
+    const map = L.map('map', {
+      center: [-38.0000, -68.0000],
+      zoom: 4,
+      minZoom: 3,
+      maxZoom: 8
+    });
+
+    // Custom Stamen Watercolor / Antiqued Tile Layer Style using OpenStreetMap standard with Sepia/Ancient Style
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Add Markers to Map
+    mapucheData.forEach(item => {
+      const isGod = item.type === "god";
+      const markerClass = isGod ? "marker-god" : "marker-monster";
+      const markerIcon = L.divIcon({
+        className: 'custom-div-icon',
+        html: `<div class="custom-marker ${markerClass}">${isGod ? '神' : '怪'}</div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+      });
+
+      const marker = L.marker([item.lat, item.lng], { icon: markerIcon }).addTo(map);
+
+      // Click Event to open modal
+      marker.on('click', () => {
+        openModal(item);
+      });
+    });
+
+    // Modal Control Functions
+    function openModal(item) {
+      const isGod = item.type === "god";
+      const typeBadge = document.getElementById("entityType");
+      typeBadge.textContent = isGod ? "神格 (Ngen / Dios)" : "妖怪・怪物 (Creature / Maito)";
+      typeBadge.className = `entity-type ${isGod ? "type-god" : "type-monster"}`;
+
+      document.getElementById("entityTitle").textContent = item.name;
+      document.getElementById("entityLocation").textContent = `📍 ${item.locationName}`;
+      document.getElementById("entityDescription").textContent = item.description;
+      document.getElementById("entityOrigin").textContent = item.origin;
+
+      const refList = document.getElementById("referenceList");
+      refList.innerHTML = "";
+      item.refs.forEach(ref => {
+        const li = document.createElement("li");
+        li.textContent = ref;
+        refList.appendChild(li);
+      });
+
+      document.getElementById("detailModal").style.display = "flex";
+    }
+
+    function closeModal() {
+      document.getElementById("detailModal").style.display = "none";
+    }
+
+    // Close modal when clicking outside content
+    window.onclick = function(event) {
+      const modal = document.getElementById("detailModal");
+      if (event.target === modal) {
+        closeModal();
+      }
+    };
+  </script>
+</body>
+</html>
